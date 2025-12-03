@@ -1,6 +1,8 @@
 /face_images
 /results
+/excursion_results
 
 *.jpg
 *.png
 *.jpeg
+*.mp4
