@@ -1,6 +1,7 @@
 /face_images
 /results
 /excursion_results
+/independence_results
 
 *.jpg
 *.png

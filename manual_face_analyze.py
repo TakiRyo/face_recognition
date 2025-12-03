@@ -5,7 +5,7 @@ import numpy as np
 # ==========================================
 IMAGE_PATH = '/Users/takiguchiryosei/Documents/face_recognition/face_images/para_1.png'  # 画像ファイル名
 # ==========================================
-result_path = '/Users/takiguchiryosei/Documents/face_recognition/result.png'
+result_path = '/Users/takiguchiryosei/Documents/face_recognition/results/result.png'
 
 mp_face_mesh = mp.solutions.face_mesh
 face_mesh = mp_face_mesh.FaceMesh(
