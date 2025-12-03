@@ -3,8 +3,9 @@ import mediapipe as mp
 import numpy as np
 
 # ==========================================
-IMAGE_PATH = '/Users/takiguchiryosei/Documents/face_recognition/faces/para_1.png'  # ここに画像ファイル名
+IMAGE_PATH = '/Users/takiguchiryosei/Documents/face_recognition/face_images/para_1.png'  # 画像ファイル名
 # ==========================================
+result_path = '/Users/takiguchiryosei/Documents/face_recognition/result.png'
 
 mp_face_mesh = mp.solutions.face_mesh
 face_mesh = mp_face_mesh.FaceMesh(
@@ -31,7 +32,7 @@ def apply_transform(image, angle, tx, ty):
 
 def manual_alignment_grid(image):
     """
-    等間隔グリッド付きの手動アライメント
+    太い線は縦のみ＋横は等間隔グリッド
     """
     angle = 0.0
     tx = 0
@@ -39,7 +40,7 @@ def manual_alignment_grid(image):
     
     base_image = image.copy()
     h, w = base_image.shape[:2]
-    cx, cy = w // 2, h // 2 # 画面中心
+    cx, cy = w // 2, h // 2 
     
     print("--- アライメントモード ---")
     print(" [矢印キー]: 移動  [Z/X]: 回転")
@@ -52,24 +53,23 @@ def manual_alignment_grid(image):
         main_color = (0, 255, 255) # 黄色（太い）
         sub_color = (0, 150, 150)  # 暗めの黄色（細い）
         
-        # 1. メインの十字線 (ここに鼻と顔の中心を合わせる)
-        cv2.line(display_img, (0, cy), (w, cy), main_color, 2)
+        # 1. メインの縦線 (これだけ太く表示)
         cv2.line(display_img, (cx, 0), (cx, h), main_color, 2)
         
-        # 2. 等間隔の水平ライン (上下に50px間隔)
+        # 2. 等間隔の水平ライン (位置合わせ用のガイド)
         step = 50 
-        # 下方向へ描画
-        for y in range(cy + step, h, step):
+        # 下方向
+        for y in range(cy, h, step):
             cv2.line(display_img, (0, y), (w, y), sub_color, 1)
-        # 上方向へ描画
-        for y in range(cy - step, -1, -step):
+        # 上方向
+        for y in range(cy, -1, -step):
             cv2.line(display_img, (0, y), (w, y), sub_color, 1)
 
         # 情報表示
         info = f"Angle: {angle:.1f}  X:{tx} Y:{ty}"
         cv2.putText(display_img, info, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0,0,0), 2)
         
-        cv2.imshow('Manual Alignment (Grid)', display_img)
+        cv2.imshow('Manual Alignment', display_img)
         
         key = cv2.waitKey(0)
         
@@ -78,17 +78,15 @@ def manual_alignment_grid(image):
         elif key == 27: # ESC
             return None
             
-        # 操作系
         step_move = 2
         step_angle = 0.2
         
         if key == ord('z'): angle += step_angle
         elif key == ord('x'): angle -= step_angle
-        elif key == 81 or key == 2424832: tx -= step_move # Left
-        elif key == 82 or key == 2555904: ty -= step_move # Up
-        elif key == 83 or key == 2621440: tx += step_move # Right
-        elif key == 84 or key == 2490368: ty += step_move # Down
-        # Mac OpenCV fix
+        elif key == 81 or key == 2424832: tx -= step_move 
+        elif key == 82 or key == 2555904: ty -= step_move 
+        elif key == 83 or key == 2621440: tx += step_move 
+        elif key == 84 or key == 2490368: ty += step_move 
         elif key == 0: ty -= step_move
         elif key == 1: ty += step_move
         elif key == 2: tx -= step_move
@@ -110,7 +108,8 @@ def analyze_symmetry(image):
     l_eye = landmarks[KEY_POINTS['Eye'][0]].x * w
     r_eye = landmarks[KEY_POINTS['Eye'][1]].x * w
     face_width = abs(l_eye - r_eye)
-    
+
+    print("--- Symmetry Analysis ---")
     for name, (l_idx, r_idx) in KEY_POINTS.items():
         if name == 'InnerEye': continue 
 
@@ -118,17 +117,19 @@ def analyze_symmetry(image):
         r_pt = landmarks[r_idx]
         lp = np.array([l_pt.x * w, l_pt.y * h])
         rp = np.array([r_pt.x * w, r_pt.y * h])
-        
+
         y_diff = lp[1] - rp[1]
         score = (y_diff / face_width) * 100
-        
+
+        print(f"{name}: y_diff={y_diff:.2f}, score={score:.2f}%")
+
         color = (0, 255, 0)
         if abs(score) > 2.0: color = (0, 0, 255)
-        
+
         cv2.circle(image, tuple(lp.astype(int)), 4, color, -1)
         cv2.circle(image, tuple(rp.astype(int)), 4, color, -1)
         cv2.line(image, tuple(lp.astype(int)), tuple(rp.astype(int)), (200, 200, 200), 1)
-        
+
         text = f"{score:.1f}%"
         cv2.putText(image, text, (int(lp[0])-30, int(lp[1])-10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255,255,255), 3)
         cv2.putText(image, text, (int(lp[0])-30, int(lp[1])-10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 1)
@@ -141,6 +142,5 @@ if original_img is not None:
     aligned_img = manual_alignment_grid(original_img)
     if aligned_img is not None:
         result_img = analyze_symmetry(aligned_img)
-        cv2.imshow('Final Result', result_img)
-        cv2.waitKey(0)
-        cv2.destroyAllWindows()
+        cv2.imwrite(result_path, result_img)
+        print(f'Result saved to {result_path}')
