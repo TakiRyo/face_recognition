@@ -3,10 +3,21 @@ import mediapipe as mp
 import numpy as np
 import matplotlib.pyplot as plt
 import time
+import os
+
+# Create directories for saving results
+RESULT_DIR = '/Users/takiguchiryosei/Documents/face_recognition/excursion_results'
+
+# Update paths for saving results
+VIDEO_PATH = os.path.join(RESULT_DIR, 'motion_result_test.mp4')
+GRAPH_PATH = os.path.join(RESULT_DIR, 'excursion_graph_test.png')
+
+# Ensure the result directory exists
+os.makedirs(RESULT_DIR, exist_ok=True)
 
 # ==========================================
 # 保存ファイル名
-OUTPUT_VIDEO_PATH = '/Users/takiguchiryosei/Documents/face_recognition/excursion_results/motion_result.mp4'  # トラッキング確認用動画
+OUTPUT_VIDEO_PATH = VIDEO_PATH  # トラッキング確認用動画
 # ==========================================
 
 mp_face_mesh = mp.solutions.face_mesh
@@ -203,8 +214,8 @@ def analyze_data(data):
     print("="*30 + "\n")
     
     # Save the graph as an image file
-    plt.savefig('/Users/takiguchiryosei/Documents/face_recognition/excursion_results/excursion_graph.png')
-    print("Graph saved as 'excursion_graph.png' in the results folder.")
+    plt.savefig(GRAPH_PATH)
+    print(f"Graph saved as '{GRAPH_PATH}' in the results folder.")
     plt.show()
 
 if __name__ == "__main__":

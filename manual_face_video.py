@@ -4,16 +4,11 @@ import numpy as np
 import os
 
 # Create directories for saving results
-RESULT_DIR = '/Users/takiguchiryosei/Documents/face_recognition/excursion_results/result'
-VIDEO_DIR = os.path.join(RESULT_DIR, 'video')
-GRAPH_DIR = os.path.join(RESULT_DIR, 'graph')
-
-os.makedirs(VIDEO_DIR, exist_ok=True)
-os.makedirs(GRAPH_DIR, exist_ok=True)
+RESULT_DIR = '/Users/takiguchiryosei/Documents/face_recognition/manual_face_video_results'
 
 # Update paths for saving results
-VIDEO_PATH = os.path.join(VIDEO_DIR, 'result_video.mp4')
-GRAPH_PATH = os.path.join(GRAPH_DIR, 'result_graph.png')
+VIDEO_PATH = os.path.join(RESULT_DIR, 'result_video.mp4')
+GRAPH_PATH = os.path.join(RESULT_DIR, 'result_graph.png')
 
 # Replace RESULT_PATH with GRAPH_PATH for saving graphs
 RESULT_PATH = GRAPH_PATH

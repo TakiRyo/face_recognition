@@ -7,4 +7,7 @@
 水平を手動で調整する。面倒だけど、精度は良い。
 
 ## manual_face_video.py  
-web cameraを使って撮影できる。水平は写真撮影後に手動で水平調整。
+web cameraを使って撮影できる。水平は写真撮影後に手動で水平調整
+
+## excursion.py  
+保存path用修正

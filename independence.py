@@ -8,8 +8,8 @@ import os
 # ==========================================
 # 設定: 保存先フォルダとファイル名
 OUTPUT_DIR = '/Users/takiguchiryosei/Documents/face_recognition/independence_results'
-VIDEO_NAME = 'independence_video.mp4'
-GRAPH_NAME = 'independence_graph.png'
+VIDEO_NAME = 'independence_video_ishida.mp4'
+GRAPH_NAME = 'independence_graph_ishida.png'
 # ==========================================
 
 # フォルダがなければ作成
