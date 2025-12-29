@@ -3,6 +3,7 @@
 /excursion_results
 /independence_results
 /manual_face_video_results
+/webcam_results
 
 *.jpg
 *.png
