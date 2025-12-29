@@ -25,12 +25,12 @@ KEY_POINTS = {
 
 # 実測した左右目尻間の距離（mm）- ユーザーの実測値
 MEASURED_EYE_WIDTH_MM = 105.0
-REFERENCE_STICKER_MM = 10.0  # 赤い円形シールの実寸直径（mm）
+REFERENCE_STICKER_MM = 15.0  # 青い円形シールの実寸直径（mm）
 
 def select_scale_method():
     print("\nSelect scale method:")
     print("  [1] Eye width (landmarks 33-263)")
-    print("  [2] Forehead RED sticker (10mm)")
+    print("  [2] Forehead BLUE sticker (15mm)")
     choice = input("Enter 1 or 2 (default 1): ").strip()
     return 'sticker' if choice == '2' else 'eye'
 
@@ -64,8 +64,8 @@ def calculate_scale_from_sticker(image, landmarks, sticker_mm=REFERENCE_STICKER_
 
     # 額は眉間より上にあるため、上方向に広めにとる
     roi_width = int(v_dist * 2.0)
-    roi_height_top = int(v_dist * 2.5)
-    roi_height_bottom = int(v_dist * 0.8)
+    roi_height_top = int(v_dist * 1.5)
+    roi_height_bottom = int(v_dist * 1.0)
 
     x1 = max(0, cx - roi_width // 2)
     x2 = min(w, cx + roi_width // 2)
@@ -80,14 +80,10 @@ def calculate_scale_from_sticker(image, landmarks, sticker_mm=REFERENCE_STICKER_
     # HSV 変換
     hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
 
-    # 赤色マスク（0付近と180付近の2レンジ）
-    lower_red1 = np.array([0, 80, 80])
-    upper_red1 = np.array([10, 255, 255])
-    lower_red2 = np.array([170, 80, 80])
-    upper_red2 = np.array([180, 255, 255])
-    mask1 = cv2.inRange(hsv, lower_red1, upper_red1)
-    mask2 = cv2.inRange(hsv, lower_red2, upper_red2)
-    mask = cv2.bitwise_or(mask1, mask2)
+    # 青色マスク
+    lower_blue = np.array([100, 80, 80])
+    upper_blue = np.array([130, 255, 255])
+    mask = cv2.inRange(hsv, lower_blue, upper_blue)
 
     # ノイズ除去（Open/Close）
     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
@@ -125,12 +121,7 @@ def calculate_scale_from_sticker(image, landmarks, sticker_mm=REFERENCE_STICKER_
             best_circle = ((cx_r, cy_r), radius)
 
     if best_circle is None or best_circle[1] <= 0:
-        # デバッグ: ROI枠だけ描画して返す
-        debug_img = image.copy()
-        cv2.rectangle(debug_img, (x1, y1), (x2, y2), (0, 255, 255), 2)
-        cv2.putText(debug_img, "Sticker not found", (x1 + 5, y1 + 20), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 0), 3)
-        cv2.putText(debug_img, "Sticker not found", (x1 + 5, y1 + 20), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 255), 1)
-        return None, debug_img
+        return None, image  # Removed yellow box debug drawing
 
     # 直径(px)から mm/px を算出
     ((cx_r, cy_r), radius) = best_circle
