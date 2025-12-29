@@ -22,10 +22,8 @@ KEY_POINTS = {
     'Mouth': (61, 291),
 }
 
-# 虹彩（黒目）のインデックス（MediaPipe仕様）
-LEFT_IRIS = [469, 470, 471, 472] # 左目虹彩の外周
-RIGHT_IRIS = [474, 475, 476, 477] # 右目虹彩の外周
-IRIS_DIAMETER_MM = 11.7 # 人間の虹彩の平均直径（mm）
+# 実測した左右目尻間の距離（mm）- ユーザーの実測値
+MEASURED_EYE_WIDTH_MM = 105.0
 
 def capture_from_webcam():
     cap = cv2.VideoCapture(0)
@@ -135,65 +133,40 @@ def analyze_symmetry_mm(image):
 
     lm = results.multi_face_landmarks[0].landmark
 
-    # --- 1. 虹彩（黒目）からスケール（mm/px）を計算 ---
-    # 既存の計算（隣接点間）
-    iris_p1 = np.array([lm[LEFT_IRIS[0]].x * w, lm[LEFT_IRIS[0]].y * h])
-    iris_p2 = np.array([lm[LEFT_IRIS[1]].x * w, lm[LEFT_IRIS[1]].y * h])
-    iris_diameter_px_legacy = np.linalg.norm(iris_p1 - iris_p2)
-
-    # より厳密な直径（対向点間の縦横の平均）
-    iris_top = np.array([lm[LEFT_IRIS[0]].x * w, lm[LEFT_IRIS[0]].y * h])
-    iris_bottom = np.array([lm[LEFT_IRIS[2]].x * w, lm[LEFT_IRIS[2]].y * h])
-    iris_left = np.array([lm[LEFT_IRIS[1]].x * w, lm[LEFT_IRIS[1]].y * h])
-    iris_right = np.array([lm[LEFT_IRIS[3]].x * w, lm[LEFT_IRIS[3]].y * h])
-    iris_vert_px = np.linalg.norm(iris_top - iris_bottom)
-    iris_horz_px = np.linalg.norm(iris_left - iris_right)
-    iris_diameter_px_avg = (iris_vert_px + iris_horz_px) / 2.0
+    # --- 1. 基準となる「左目尻(33)」と「右目尻(263)」のピクセル距離を測る ---
+    p_left_eye = np.array([lm[33].x * w, lm[33].y * h])
+    p_right_eye = np.array([lm[263].x * w, lm[263].y * h])
+    eye_width_px = np.linalg.norm(p_left_eye - p_right_eye)
 
     # 1ピクセルが何ミリか (mm/px)
-    mm_per_px_legacy = IRIS_DIAMETER_MM / iris_diameter_px_legacy if iris_diameter_px_legacy > 0 else 0.0
-    mm_per_px_avg = IRIS_DIAMETER_MM / iris_diameter_px_avg if iris_diameter_px_avg > 0 else 0.0
+    mm_per_px = MEASURED_EYE_WIDTH_MM / eye_width_px if eye_width_px > 0 else 0.0
 
     # 顔幅（正規化・比較用）
     face_width_px = abs(lm[33].x * w - lm[263].x * w)
-    face_width_mm_legacy = face_width_px * mm_per_px_legacy
-    face_width_mm_avg = face_width_px * mm_per_px_avg
+    face_width_mm = face_width_px * mm_per_px
 
     # デバッグ出力
     print("\n" + "-"*60)
-    print("[DEBUG] Iris diameters (px):")
-    print(f"  legacy(adjacent): {iris_diameter_px_legacy:.2f}")
-    print(f"  vertical(opposite): {iris_vert_px:.2f}")
-    print(f"  horizontal(opposite): {iris_horz_px:.2f}")
-    print(f"  average(opposite): {iris_diameter_px_avg:.2f}")
+    print("[DEBUG] Eye width (outer corners):")
+    print(f"  eye_width_px (33-263): {eye_width_px:.2f} px")
+    print(f"  MEASURED_EYE_WIDTH_MM: {MEASURED_EYE_WIDTH_MM:.1f} mm")
     print("[DEBUG] mm_per_px:")
-    print(f"  legacy: {mm_per_px_legacy:.5f} mm/px")
-    print(f"  average: {mm_per_px_avg:.5f} mm/px")
+    print(f"  {mm_per_px:.5f} mm/px")
     print("[DEBUG] Face width estimates:")
     print(f"  face_width_px: {face_width_px:.2f} px")
-    print(f"  legacy: {face_width_mm_legacy:.2f} mm | avg: {face_width_mm_avg:.2f} mm")
-    try:
-        target_mm = 120.0
-        legacy_err = (face_width_mm_legacy - target_mm)
-        avg_err = (face_width_mm_avg - target_mm)
-        legacy_err_pct = (legacy_err / target_mm) * 100.0
-        avg_err_pct = (avg_err / target_mm) * 100.0
-        print(f"  vs 120mm -> legacy Δ: {legacy_err:+.2f} mm ({legacy_err_pct:+.1f}%), avg Δ: {avg_err:+.2f} mm ({avg_err_pct:+.1f}%)")
-    except Exception as e:
-        print(f"[DEBUG] comparison error: {e}")
+    print(f"  face_width_mm: {face_width_mm:.2f} mm")
     print("-"*60)
 
     # 画面左上にデバッグ情報を重ねて表示
     overlay_lines = [
-        f"Iris(px) adj:{iris_diameter_px_legacy:.1f} v:{iris_vert_px:.1f} h:{iris_horz_px:.1f}",
-        f"mm/px adj:{mm_per_px_legacy:.4f} avg:{mm_per_px_avg:.4f}",
-        f"Face px:{face_width_px:.1f} mm adj:{face_width_mm_legacy:.1f} avg:{face_width_mm_avg:.1f}",
-        "Target 120mm comparison shown in console"
+        f"Eye width: {eye_width_px:.1f}px = {MEASURED_EYE_WIDTH_MM:.1f}mm",
+        f"mm/px: {mm_per_px:.4f}",
+        f"Face: {face_width_px:.1f}px = {face_width_mm:.1f}mm"
     ]
     y0 = 25
     for i, line in enumerate(overlay_lines):
-        cv2.putText(image, line, (10, y0 + i*20), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0,0,0), 3)
-        cv2.putText(image, line, (10, y0 + i*20), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255,255,255), 1)
+        cv2.putText(image, line, (10, y0 + i*20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,0), 3)
+        cv2.putText(image, line, (10, y0 + i*20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,255,255), 1)
 
     print("\n" + "="*45)
     print(f"{'PART':<12} | {'Y-DIFF(px)':<10} | {'SCORE(%)':<8} | {'DIFF(mm)':<8}")
@@ -207,8 +180,7 @@ def analyze_symmetry_mm(image):
         y_diff_px = lp[1] - rp[1]
         
         # 物理距離（mm）への変換
-        # 差分は平均スケールで表示（より安定）
-        y_diff_mm = y_diff_px * mm_per_px_avg
+        y_diff_mm = y_diff_px * mm_per_px
         
         # 従来通りの比率スコア（%）
         score_percent = (y_diff_px / face_width_px) * 100
@@ -230,8 +202,8 @@ def analyze_symmetry_mm(image):
                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 1)
 
     print("="*45)
-    print(f"Scale Reference: Iris Diameter = {IRIS_DIAMETER_MM}mm")
-    print(f"Face width (avg scale) = {face_width_mm_avg:.2f} mm")
+    print(f"Scale Reference: Eye Width (33-263) = {MEASURED_EYE_WIDTH_MM}mm")
+    print(f"Face width = {face_width_mm:.2f} mm")
     return image
 
 # --- Main ---
