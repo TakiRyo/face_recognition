@@ -2,7 +2,10 @@
 
 ## web_camera.py. 
 web camera 撮影。
-目尻の長さを使用してピクセルからmmに変換。
+目尻の長さを使用してピクセルからmmに変換.  
+
+## web camera select.py. 
+目尻の長さか、シールか選べる。　　
 
 ## analyze_face.py  
 水平を自動で調整して、結果を表示。時々ずれるけど簡単
