@@ -15,9 +15,10 @@ face_mesh = mp_face_mesh.FaceMesh(
     refine_landmarks=True,
     min_detection_confidence=0.5)
 
+
 # 評価する特徴点 (left_idx, right_idx, threshold_%)
 KEY_POINTS = {
-    'Eyebrow': (105, 334, 3.0),  # 眉毛の閾値
+    'Eyebrow': (105, 334, 4.0),  # 眉毛の閾値
     'Eye': (33, 263, 2.0),       # 目の閾値
     'Mouth': (61, 291, 2.5),     # 口の閾値
 }
@@ -324,6 +325,7 @@ def analyze_symmetry_mm(image, scale_method: str = 'eye'):
         # 従来通りの比率スコア（%）
         score_percent = (y_diff_px / face_width_px) * 100
 
+
         # ターミナル表示
         print(f"{name:<12} | {y_diff_px:10.1f} | {score_percent:7.1f}% | {abs(y_diff_mm):6.2f} mm")
 
@@ -334,7 +336,7 @@ def analyze_symmetry_mm(image, scale_method: str = 'eye'):
         cv2.line(image, tuple(lp.astype(int)), tuple(rp.astype(int)), (200, 200, 200), 1)
 
         # mm表示を優先して大きく描画
-        label = f"{abs(y_diff_mm):.1f}mm ({score_percent:+.1f}%)"
+        label = f"{abs(y_diff_mm):.1f}mm ({abs(score_percent):.1f}%)"
         cv2.putText(image, label, (int(lp[0])-40, int(lp[1])-15), 
                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 0), 3) # 縁取り
         cv2.putText(image, label, (int(lp[0])-40, int(lp[1])-15), 
