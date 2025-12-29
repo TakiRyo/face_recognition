@@ -18,7 +18,7 @@ face_mesh = mp_face_mesh.FaceMesh(
 
 # 評価する特徴点 (left_idx, right_idx, threshold_%)
 KEY_POINTS = {
-    'Eyebrow': (105, 334, 4.0),  # 眉毛の閾値
+    'Eyebrow': (105, 334, 8.0),  # 眉毛の閾値
     'Eye': (33, 263, 2.0),       # 目の閾値
     'Mouth': (61, 291, 2.5),     # 口の閾値
 }
@@ -63,9 +63,9 @@ def calculate_scale_from_sticker(image, landmarks, sticker_mm=REFERENCE_STICKER_
     cy = int(min(p10[1], p9[1]))
 
     # 額は眉間より上にあるため、上方向に広めにとる
-    roi_width = int(v_dist * 2.0)
-    roi_height_top = int(v_dist * 1.5)
-    roi_height_bottom = int(v_dist * 1.0)
+    roi_width = int(v_dist * 5.0)
+    roi_height_top = int(v_dist * 5.0)
+    roi_height_bottom = int(v_dist * 5.0)
 
     x1 = max(0, cx - roi_width // 2)
     x2 = min(w, cx + roi_width // 2)
@@ -132,7 +132,8 @@ def calculate_scale_from_sticker(image, landmarks, sticker_mm=REFERENCE_STICKER_
     debug_img = image.copy()
     center_abs = (int(x1 + cx_r), int(y1 + cy_r))
     radius_int = int(radius)
-    cv2.rectangle(debug_img, (x1, y1), (x2, y2), (0, 255, 255), 2)
+    # yellow rectangle
+    # cv2.rectangle(debug_img, (x1, y1), (x2, y2), (0, 255, 255), 2)
     cv2.circle(debug_img, center_abs, radius_int, (0, 255, 0), 2)
     label = f"Sticker d={diameter_px:.1f}px | mm/px={mm_per_px:.4f}"
     cv2.putText(debug_img, label, (center_abs[0] - 80, center_abs[1] - radius_int - 10),
