@@ -1,5 +1,13 @@
 # face recognition  
 
+## eye_details.py. 
+上瞼と下瞼がどれくらい動いているかを個別に測る。  
+目の特徴長検出がノイジーなのか、測り方が良くないのか良い結果が出ない。  
+
+## coner_of_mouth_detail.py. 
+未実装
+口角がどの方向にどれくらい上がっているか
+
 ## web_camera.py. 
 web camera 撮影。
 目尻の長さを使用してピクセルからmmに変換.  
