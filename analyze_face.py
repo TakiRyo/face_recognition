@@ -5,7 +5,7 @@ import math
 
 # ==========================================
 # 設定: ここに画像のファイル名を入れてください
-IMAGE_PATH = '/Users/takiguchiryosei/Documents/face_recognition/faces/para_3.png' 
+IMAGE_PATH = '/Users/takiguchiryosei/Documents/face_recognition/face_images/para_3.png' 
 # ==========================================
 
 # MediaPipeの初期設定 (静止画モード: static_image_mode=True)
