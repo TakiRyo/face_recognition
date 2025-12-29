@@ -15,11 +15,11 @@ face_mesh = mp_face_mesh.FaceMesh(
     refine_landmarks=True,
     min_detection_confidence=0.5)
 
-# 評価する特徴点
+# 評価する特徴点 (left_idx, right_idx, threshold_%)
 KEY_POINTS = {
-    'Eyebrow': (105, 334),
-    'Eye': (33, 263),   
-    'Mouth': (61, 291),
+    'Eyebrow': (105, 334, 3.0),  # 眉毛の閾値
+    'Eye': (33, 263, 2.0),       # 目の閾値
+    'Mouth': (61, 291, 2.5),     # 口の閾値
 }
 
 # 実測した左右目尻間の距離（mm）- ユーザーの実測値
@@ -311,7 +311,7 @@ def analyze_symmetry_mm(image, scale_method: str = 'eye'):
     print(f"{'PART':<12} | {'Y-DIFF(px)':<10} | {'SCORE(%)':<8} | {'DIFF(mm)':<8}")
     print("-" * 45)
 
-    for name, (l_idx, r_idx) in KEY_POINTS.items():
+    for name, (l_idx, r_idx, threshold) in KEY_POINTS.items():
         lp = np.array([lm[l_idx].x * w, lm[l_idx].y * h])
         rp = np.array([lm[r_idx].x * w, lm[r_idx].y * h])
 
@@ -327,8 +327,8 @@ def analyze_symmetry_mm(image, scale_method: str = 'eye'):
         # ターミナル表示
         print(f"{name:<12} | {y_diff_px:10.1f} | {score_percent:7.1f}% | {abs(y_diff_mm):6.2f} mm")
 
-        # 画像への描画
-        color = (0, 255, 0) if abs(score_percent) < 2.5 else (0, 0, 255)
+        # 画像への描画（パーツごとの閾値を使用）
+        color = (0, 255, 0) if abs(score_percent) < threshold else (0, 0, 255)
         cv2.circle(image, tuple(lp.astype(int)), 5, color, -1)
         cv2.circle(image, tuple(rp.astype(int)), 5, color, -1)
         cv2.line(image, tuple(lp.astype(int)), tuple(rp.astype(int)), (200, 200, 200), 1)

@@ -6,6 +6,8 @@ web camera 撮影。
 
 ## web camera select.py. 
 目尻の長さか、シールか選べる。　　
+params:  
+eyebrow / eye / mouth threshold
 
 ## analyze_face.py  
 水平を自動で調整して、結果を表示。時々ずれるけど簡単
