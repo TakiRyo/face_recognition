@@ -60,27 +60,69 @@ def apply_transform(image, angle, tx, ty):
     return cv2.warpAffine(image, M, (w, h), borderValue=(200, 200, 200))
 
 def manual_alignment_grid(image):
-    angle, tx, ty = 0.0, 0, 0
-    h, w = image.shape[:2]
+    """
+    太い線は縦のみ＋横は等間隔グリッド
+    """
+    angle = 0.0
+    tx = 0
+    ty = 0
+    
+    base_image = image.copy()
+    h, w = base_image.shape[:2]
     cx, cy = w // 2, h // 2 
-    print("--- アライメント: [矢印キー]移動 [Z/X]回転 [Enter]確定 ---")
+    
+    print("--- アライメントモード ---")
+    print(" [矢印キー]: 移動  [Z/X]: 回転")
+    print(" [Enter]: 確定")
+    
     while True:
-        display_img = apply_transform(image, angle, tx, ty)
-        cv2.line(display_img, (cx, 0), (cx, h), (0, 255, 255), 2) # 中心線
-        for y in range(cy, h, 50): cv2.line(display_img, (0, y), (w, y), (0, 150, 150), 1)
-        for y in range(cy, -1, -50): cv2.line(display_img, (0, y), (w, y), (0, 150, 150), 1)
+        display_img = apply_transform(base_image, angle, tx, ty)
+        
+        # --- グリッド描画 ---
+        main_color = (0, 255, 255) # 黄色（太い）
+        sub_color = (0, 150, 150)  # 暗めの黄色（細い）
+        
+        # 1. メインの縦線 (これだけ太く表示)
+        cv2.line(display_img, (cx, 0), (cx, h), main_color, 2)
+        
+        # 2. 等間隔の水平ライン (位置合わせ用のガイド)
+        step = 50 
+        # 下方向
+        for y in range(cy, h, step):
+            cv2.line(display_img, (0, y), (w, y), sub_color, 1)
+        # 上方向
+        for y in range(cy, -1, -step):
+            cv2.line(display_img, (0, y), (w, y), sub_color, 1)
+
+        # 情報表示
+        info = f"Angle: {angle:.1f}  X:{tx} Y:{ty}"
+        cv2.putText(display_img, info, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0,0,0), 2)
+        
         cv2.imshow('Manual Alignment', display_img)
+        
         key = cv2.waitKey(0)
-        if key == 13: break # Enter
-        elif key == 27: return None
-        if key == ord('z'): angle += 0.2
-        elif key == ord('x'): angle -= 0.2
-        elif key in [81, 2424832, ord('a')]: tx -= 2 # Left
-        elif key in [83, 2621440, ord('d')]: tx += 2 # Right
-        elif key in [82, 2555904, ord('w')]: ty -= 2 # Up
-        elif key in [84, 2490368, ord('s')]: ty += 2 # Down
+        
+        if key == 13: # Enter
+            break
+        elif key == 27: # ESC
+            return None
+            
+        step_move = 2
+        step_angle = 0.2
+        
+        if key == ord('z'): angle += step_angle
+        elif key == ord('x'): angle -= step_angle
+        elif key == 81 or key == 2424832: tx -= step_move 
+        elif key == 82 or key == 2555904: ty -= step_move 
+        elif key == 83 or key == 2621440: tx += step_move 
+        elif key == 84 or key == 2490368: ty += step_move 
+        elif key == 0: ty -= step_move
+        elif key == 1: ty += step_move
+        elif key == 2: tx -= step_move
+        elif key == 3: tx += step_move
+
     cv2.destroyAllWindows()
-    return apply_transform(image, angle, tx, ty)
+    return apply_transform(base_image, angle, tx, ty)
 
 def analyze_symmetry_mm(image):
     h, w, _ = image.shape
@@ -94,16 +136,64 @@ def analyze_symmetry_mm(image):
     lm = results.multi_face_landmarks[0].landmark
 
     # --- 1. 虹彩（黒目）からスケール（mm/px）を計算 ---
-    # 左目の虹彩の上下点を使ってピクセル直径を算出
+    # 既存の計算（隣接点間）
     iris_p1 = np.array([lm[LEFT_IRIS[0]].x * w, lm[LEFT_IRIS[0]].y * h])
     iris_p2 = np.array([lm[LEFT_IRIS[1]].x * w, lm[LEFT_IRIS[1]].y * h])
-    iris_diameter_px = np.linalg.norm(iris_p1 - iris_p2)
-    
+    iris_diameter_px_legacy = np.linalg.norm(iris_p1 - iris_p2)
+
+    # より厳密な直径（対向点間の縦横の平均）
+    iris_top = np.array([lm[LEFT_IRIS[0]].x * w, lm[LEFT_IRIS[0]].y * h])
+    iris_bottom = np.array([lm[LEFT_IRIS[2]].x * w, lm[LEFT_IRIS[2]].y * h])
+    iris_left = np.array([lm[LEFT_IRIS[1]].x * w, lm[LEFT_IRIS[1]].y * h])
+    iris_right = np.array([lm[LEFT_IRIS[3]].x * w, lm[LEFT_IRIS[3]].y * h])
+    iris_vert_px = np.linalg.norm(iris_top - iris_bottom)
+    iris_horz_px = np.linalg.norm(iris_left - iris_right)
+    iris_diameter_px_avg = (iris_vert_px + iris_horz_px) / 2.0
+
     # 1ピクセルが何ミリか (mm/px)
-    mm_per_px = IRIS_DIAMETER_MM / iris_diameter_px
-    
-    # 顔幅（正規化用スコアのため）
+    mm_per_px_legacy = IRIS_DIAMETER_MM / iris_diameter_px_legacy if iris_diameter_px_legacy > 0 else 0.0
+    mm_per_px_avg = IRIS_DIAMETER_MM / iris_diameter_px_avg if iris_diameter_px_avg > 0 else 0.0
+
+    # 顔幅（正規化・比較用）
     face_width_px = abs(lm[33].x * w - lm[263].x * w)
+    face_width_mm_legacy = face_width_px * mm_per_px_legacy
+    face_width_mm_avg = face_width_px * mm_per_px_avg
+
+    # デバッグ出力
+    print("\n" + "-"*60)
+    print("[DEBUG] Iris diameters (px):")
+    print(f"  legacy(adjacent): {iris_diameter_px_legacy:.2f}")
+    print(f"  vertical(opposite): {iris_vert_px:.2f}")
+    print(f"  horizontal(opposite): {iris_horz_px:.2f}")
+    print(f"  average(opposite): {iris_diameter_px_avg:.2f}")
+    print("[DEBUG] mm_per_px:")
+    print(f"  legacy: {mm_per_px_legacy:.5f} mm/px")
+    print(f"  average: {mm_per_px_avg:.5f} mm/px")
+    print("[DEBUG] Face width estimates:")
+    print(f"  face_width_px: {face_width_px:.2f} px")
+    print(f"  legacy: {face_width_mm_legacy:.2f} mm | avg: {face_width_mm_avg:.2f} mm")
+    try:
+        target_mm = 120.0
+        legacy_err = (face_width_mm_legacy - target_mm)
+        avg_err = (face_width_mm_avg - target_mm)
+        legacy_err_pct = (legacy_err / target_mm) * 100.0
+        avg_err_pct = (avg_err / target_mm) * 100.0
+        print(f"  vs 120mm -> legacy Δ: {legacy_err:+.2f} mm ({legacy_err_pct:+.1f}%), avg Δ: {avg_err:+.2f} mm ({avg_err_pct:+.1f}%)")
+    except Exception as e:
+        print(f"[DEBUG] comparison error: {e}")
+    print("-"*60)
+
+    # 画面左上にデバッグ情報を重ねて表示
+    overlay_lines = [
+        f"Iris(px) adj:{iris_diameter_px_legacy:.1f} v:{iris_vert_px:.1f} h:{iris_horz_px:.1f}",
+        f"mm/px adj:{mm_per_px_legacy:.4f} avg:{mm_per_px_avg:.4f}",
+        f"Face px:{face_width_px:.1f} mm adj:{face_width_mm_legacy:.1f} avg:{face_width_mm_avg:.1f}",
+        "Target 120mm comparison shown in console"
+    ]
+    y0 = 25
+    for i, line in enumerate(overlay_lines):
+        cv2.putText(image, line, (10, y0 + i*20), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0,0,0), 3)
+        cv2.putText(image, line, (10, y0 + i*20), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255,255,255), 1)
 
     print("\n" + "="*45)
     print(f"{'PART':<12} | {'Y-DIFF(px)':<10} | {'SCORE(%)':<8} | {'DIFF(mm)':<8}")
@@ -117,7 +207,8 @@ def analyze_symmetry_mm(image):
         y_diff_px = lp[1] - rp[1]
         
         # 物理距離（mm）への変換
-        y_diff_mm = y_diff_px * mm_per_px
+        # 差分は平均スケールで表示（より安定）
+        y_diff_mm = y_diff_px * mm_per_px_avg
         
         # 従来通りの比率スコア（%）
         score_percent = (y_diff_px / face_width_px) * 100
@@ -140,6 +231,7 @@ def analyze_symmetry_mm(image):
 
     print("="*45)
     print(f"Scale Reference: Iris Diameter = {IRIS_DIAMETER_MM}mm")
+    print(f"Face width (avg scale) = {face_width_mm_avg:.2f} mm")
     return image
 
 # --- Main ---
