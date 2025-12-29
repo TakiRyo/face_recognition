@@ -1,4 +1,4 @@
-# face recognition  
+# face recognition eye detail branch. 
 
 ## eye_details.py. 
 上瞼と下瞼がどれくらい動いているかを個別に測る。  
