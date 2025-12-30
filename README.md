@@ -1,4 +1,6 @@
-# face recognition  
+# face recognition. 
+
+edit by ishida and feature mouth branch
 
 ## eye_details.py. 
 上瞼と下瞼がどれくらい動いているかを個別に測る。  
