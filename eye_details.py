@@ -5,9 +5,13 @@ import os
 import time
 import matplotlib.pyplot as plt
 
-# 結果保存用ディレクトリ
-RESULT_DIR = './webcam_results'
+# # 結果保存用ディレクトリ
+# RESULT_DIR = './webcam_results'
+# os.makedirs(RESULT_DIR, exist_ok=True)
+# 結果保存用ディレクトリ（リポ直下の webcam_results）
+RESULT_DIR = os.path.join(os.path.dirname(__file__), "webcam_results")
 os.makedirs(RESULT_DIR, exist_ok=True)
+
 GRAPH_PATH = os.path.join(RESULT_DIR, 'blink_graph.png')
 VIDEO_PATH = os.path.join(RESULT_DIR, 'blink_tracking.mp4')
 
