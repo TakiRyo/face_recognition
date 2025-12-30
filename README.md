@@ -1,8 +1,14 @@
 # face recognition. 
 
 ## eye_details.py. 
-上瞼と下瞼がどれくらい動いているかを個別に測る。  
-目の特徴長検出がノイジーなのか、測り方が良くないのか良い結果が出ない。  
+
+
+
+
+
+
+
+
 
 ## coner_of_mouth_detail.py. 
 未実装
