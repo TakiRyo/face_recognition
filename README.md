@@ -12,9 +12,8 @@ mm単位の定量評価: 目尻・目頭間の距離（デフォルト）また�
 Author: taki. 
 
 ## coner_of_mouth_detail.py. 
-未実装
 口角がどの方向にどれくらい上がっているか. 
-石田がやるらしい。  
+石田 
 
 ## web_camera_select.py. 
 目尻の長さか、シールか選べる。　　
