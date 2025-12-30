@@ -14,7 +14,9 @@
 params:  
 eyebrow / eye / mouth threshold. 
 メインで使っているもの。  
-
+  
+  
+  
 ## no using anymore. 
 
 ## web_camera_eye.py. 
