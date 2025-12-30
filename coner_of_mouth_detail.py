@@ -1246,10 +1246,15 @@ def analyze_vectors_mm_fixed(data):
     R_dx = [d['R_dx'] for d in data]
     R_dy = [d['R_dy'] for d in data]
 
+    # データ全体の最大振れ幅を取得（グラフのスケール統一用）
+    all_vals = L_dx + L_dy + R_dx + R_dy
+    max_val = max(np.max(np.abs(all_vals)), 15)
+    limit = max_val * 1.1
+
     # --- グラフ描画 ---
     fig1, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 8), sharex=True, sharey=True)
     
-    # Left Graph
+    # Left Graph (変更なし)
     ax1.plot(times, L_dy, label='Vertical Lift (UP)', color='blue', linewidth=2.5)
     ax1.plot(times, L_dx, label='Horizontal Widen (OUT)', color='cyan', linestyle='--', linewidth=2)
     ax1.set_title('Left Side Movement [mm] - (Ideal Pattern)')
@@ -1258,7 +1263,10 @@ def analyze_vectors_mm_fixed(data):
     ax1.grid(True)
     ax1.axhline(0, color='black', linewidth=0.5)
 
-    # Right Graph
+    # Right Graph (変更点: 横方向の正負を逆にする)
+    # R_dx の値を反転させたリストを作成してプロット
+    R_dx_inverted = [-x for x in R_dx]
+    
     ax2.plot(times, R_dy, label='Vertical Lift (UP)', color='orange', linewidth=2.5)
     ax2.plot(times, R_dx, label='Horizontal Widen (OUT)', color='red', linestyle='--', linewidth=2)
     ax2.set_title('Right Side Movement [mm]')
@@ -1274,10 +1282,7 @@ def analyze_vectors_mm_fixed(data):
     # Trajectory Graph
     fig2, (ax_l, ax_r) = plt.subplots(1, 2, figsize=(12, 6))
     
-    # 軸のスケールを統一して比較しやすくする
-    limit = max(np.max(np.abs(L_dx + L_dy + R_dx + R_dy)), 15) * 1.1
-    
-    # Left Trajectory
+    # Left Trajectory (変更なし: プラス方向メイン)
     ax_l.plot(L_dx, L_dy, color='blue', marker='o', markersize=3, alpha=0.5)
     ax_l.plot(L_dx[0], L_dy[0], 'bx', label='Start', markersize=8)
     ax_l.plot(L_dx[np.argmax(L_dy)], np.max(L_dy), 'bo', fillstyle='none', markersize=10)
@@ -1285,28 +1290,32 @@ def analyze_vectors_mm_fixed(data):
     ax_l.set_xlabel('Horizontal Widen (mm)')
     ax_l.set_ylabel('Vertical Lift (mm)')
     ax_l.grid(True)
-    ax_l.set_xlim(-5, limit) 
+    ax_l.set_xlim(-5, limit) # 右(プラス)方向に広い
     ax_l.set_ylim(-5, limit)
     ax_l.set_aspect('equal')
     
-    # 角度計算
+    # Left Angle Calculation
     idx_max_l = np.argmax(L_dy)
     if L_dx[idx_max_l] != 0:
         angle_l = math.degrees(math.atan2(L_dy[idx_max_l], L_dx[idx_max_l]))
     else: angle_l = 90
     ax_l.text(0.05, 0.95, f"Angle: {angle_l:.1f}°", transform=ax_l.transAxes, bbox=dict(facecolor='white', alpha=0.8))
 
-    # Right Trajectory
+    # Right Trajectory (変更点: マイナス方向に描画範囲を広げる)
     ax_r.plot(R_dx, R_dy, color='orange', marker='o', markersize=3, alpha=0.5)
     ax_r.plot(R_dx[0], R_dy[0], 'rx', label='Start', markersize=8)
     ax_r.plot(R_dx[np.argmax(R_dy)], np.max(R_dy), 'ro', fillstyle='none', markersize=10)
     ax_r.set_title('Right Trajectory (mm)')
     ax_r.set_xlabel('Horizontal Widen (mm)')
     ax_r.grid(True)
-    ax_r.set_xlim(-5, limit)
+    
+    # ここを変更: 左(マイナス)方向に広く、右(プラス)方向は狭く設定
+    ax_r.set_xlim(-10, limit) 
+    
     ax_r.set_ylim(-5, limit)
     ax_r.set_aspect('equal')
 
+    # Right Angle Calculation
     idx_max_r = np.argmax(R_dy)
     if R_dx[idx_max_r] != 0:
         angle_r = math.degrees(math.atan2(R_dy[idx_max_r], R_dx[idx_max_r]))
