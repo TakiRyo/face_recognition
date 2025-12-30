@@ -1,23 +1,25 @@
 # face recognition. 
 
-edit by ishida and make conflict. 
-
 ## eye_details.py. 
 上瞼と下瞼がどれくらい動いているかを個別に測る。  
 目の特徴長検出がノイジーなのか、測り方が良くないのか良い結果が出ない。  
 
 ## coner_of_mouth_detail.py. 
 未実装
-口角がどの方向にどれくらい上がっているか
+口角がどの方向にどれくらい上がっているか. 
+石田がやるらしい。  
 
-## web_camera.py. 
-web camera 撮影。
-目尻の長さを使用してピクセルからmmに変換.  
-
-## web camera select.py. 
+## web_camera_select.py. 
 目尻の長さか、シールか選べる。　　
 params:  
-eyebrow / eye / mouth threshold
+eyebrow / eye / mouth threshold. 
+メインで使っているもの。  
+
+## no using anymore. 
+
+## web_camera_eye.py. 
+web camera 撮影。
+目尻の長さを使用してピクセルからmmに変換.  
 
 ## analyze_face.py  
 水平を自動で調整して、結果を表示。時々ずれるけど簡単

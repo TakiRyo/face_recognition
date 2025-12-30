@@ -3,8 +3,9 @@ import mediapipe as mp
 import numpy as np
 import os
 
-# 結果保存用ディレクトリ
-RESULT_DIR = '/Users/takiguchiryosei/Documents/face_recognition/webcam_results'
+
+# 結果保存用ディレクトリ（リポ直下の webcam_results）
+RESULT_DIR = os.path.join(os.path.dirname(__file__), "webcam_results")
 os.makedirs(RESULT_DIR, exist_ok=True)
 RESULT_PATH = os.path.join(RESULT_DIR, 'result.png')
 
