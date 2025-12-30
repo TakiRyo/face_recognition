@@ -5,9 +5,12 @@ import os
 import time
 import matplotlib.pyplot as plt
 
-# # 結果保存用ディレクトリ
-# RESULT_DIR = './webcam_results'
-# os.makedirs(RESULT_DIR, exist_ok=True)
+############# parameters #######################
+# 実測した左右目尻間の距離（mm）- ユーザーの実測値
+MEASURED_EYE_WIDTH_MM = 105.0 #taki
+REFERENCE_STICKER_MM = 15.0  # 青い円形シールの実寸直径（mm）
+BLINK_THRESHOLD_MM = 0.0     # これを下回ると「閉じている」と判定
+
 # 結果保存用ディレクトリ（リポ直下の webcam_results）
 RESULT_DIR = os.path.join(os.path.dirname(__file__), "webcam_results")
 os.makedirs(RESULT_DIR, exist_ok=True)
@@ -24,10 +27,7 @@ face_mesh = mp_face_mesh.FaceMesh(
     min_detection_confidence=0.5,
     min_tracking_confidence=0.5)
 
-# 実測した左右目尻間の距離（mm）- ユーザーの実測値
-MEASURED_EYE_WIDTH_MM = 105.0
-REFERENCE_STICKER_MM = 15.0  # 青い円形シールの実寸直径（mm）
-BLINK_THRESHOLD_MM = 4.0     # これを下回ると「閉じている」と判定
+################################################
 
 # --- 幾何学計算ヘルパー ---
 def get_distance_point_to_line(point, line_start, line_end):
@@ -36,7 +36,8 @@ def get_distance_point_to_line(point, line_start, line_end):
     point_vec = point - line_start
     if np.linalg.norm(line_vec) == 0: return 0
     cross_prod = line_vec[0] * point_vec[1] - line_vec[1] * point_vec[0]
-    return abs(cross_prod / np.linalg.norm(line_vec))
+    signed_distance = cross_prod / np.linalg.norm(line_vec)
+    return signed_distance
 
 # --- シール検出・スケール計算 ---
 def calculate_scale_for_frame(image, landmarks, method='eye'):
@@ -97,43 +98,42 @@ def calculate_scale_for_frame(image, landmarks, method='eye'):
 def calculate_eye_metrics(landmarks, w, h, mm_per_px):
     lm = landmarks
     def get_pt(idx): return np.array([lm[idx].x * w, lm[idx].y * h])
-    
+
     # 左右のランドマーク定義
     eyes_indices = {
         'left':  {'outer':33, 'inner':133, 'top':159, 'bottom':145},
         'right': {'outer':263, 'inner':362, 'top':386, 'bottom':374}
     }
-    
+
     metrics = {}
-    
+
     for side, idxs in eyes_indices.items():
         p_outer = get_pt(idxs['outer'])
         p_inner = get_pt(idxs['inner'])
         p_top = get_pt(idxs['top'])
         p_bottom = get_pt(idxs['bottom'])
-        
+
         # 基準線（目尻-目頭）からの垂直距離
         top_dist_px = get_distance_point_to_line(p_top, p_outer, p_inner)
         bottom_dist_px = get_distance_point_to_line(p_bottom, p_outer, p_inner)
-        # print(f"{side} eye - top_dist_px: {top_dist_px}, bottom_dist_px: {bottom_dist_px}")
-        total_px = top_dist_px + bottom_dist_px
+
+        # Calculate distances in mm
+        top_mm = top_dist_px * mm_per_px
+        bottom_mm = bottom_dist_px * mm_per_px
+        total_mm = abs(top_mm - bottom_mm)  # 上瞼と下瞼の差の絶対値に変更
 
         # Clamp values to 0 if total_mm is below the blink threshold
-        if total_px * mm_per_px < BLINK_THRESHOLD_MM:
-            top_mm = 0.0
-            bottom_mm = 0.0
-            total_mm = 0.0
-        else:
-            top_mm = top_dist_px * mm_per_px
-            bottom_mm = bottom_dist_px * mm_per_px
-            total_mm = total_px * mm_per_px
-        
+        # if total_mm < BLINK_THRESHOLD_MM:
+        #     top_mm = 0.0
+        #     bottom_mm = 0.0
+        #     total_mm = 0.0
+
         metrics[side] = {
             'top_mm': top_mm,
             'bottom_mm': bottom_mm,
             'total_mm': total_mm
         }
-    
+
     return metrics
 
 
@@ -308,27 +308,41 @@ def plot_blink_results(data):
         return
 
     t = data['time']
-    
-    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 8), sharex=True)
-    
-    # Left Eye
-    ax1.set_title("Left Eye Dynamics")
-    ax1.plot(t, data['l_total'], label='Opening (Total)', color='blue', linewidth=2)
-    ax1.plot(t, data['l_top'], label='Upper Lid', color='red', linestyle='--', alpha=0.7)
-    ax1.plot(t, data['l_bottom'], label='Lower Lid', color='green', linestyle='--', alpha=0.7)
-    ax1.set_ylabel("Opening [mm]")
-    ax1.grid(True)
-    ax1.legend(loc='upper right')
-    
-    # Right Eye
-    ax2.set_title("Right Eye Dynamics")
-    ax2.plot(t, data['r_total'], label='Opening (Total)', color='blue', linewidth=2)
-    ax2.plot(t, data['r_top'], label='Upper Lid', color='red', linestyle='--', alpha=0.7)
-    ax2.plot(t, data['r_bottom'], label='Lower Lid', color='green', linestyle='--', alpha=0.7)
-    ax2.set_xlabel("Time [sec]")
-    ax2.set_ylabel("Opening [mm]")
-    ax2.grid(True)
-    ax2.legend(loc='upper right')
+
+    fig, axs = plt.subplots(2, 2, figsize=(14, 10), sharex=True)
+
+    # Left Eye - Upper and Lower Lids
+    axs[0, 0].set_title("Left Eye - Upper and Lower Lids")
+    axs[0, 0].plot(t, [-val for val in data['l_top']], label='Upper Lid', color='red', linestyle='--', alpha=0.7)
+    axs[0, 0].plot(t, [-val for val in data['l_bottom']], label='Lower Lid', color='green', linestyle='--', alpha=0.7)
+    axs[0, 0].set_ylabel("Distance between upper and lower lids [mm]")
+    axs[0, 0].grid(True)
+    axs[0, 0].legend(loc='upper right')
+
+    # Left Eye - Closeness
+    axs[1, 0].set_title("Left Eye - Closeness")
+    axs[1, 0].plot(t, [data['l_bottom'][i] - data['l_top'][i] for i in range(len(data['l_top']))], label='Closeness', color='blue', linewidth=2)
+    axs[1, 0].axhline(0, color='black', linewidth=2, linestyle='--') 
+    axs[1, 0].set_ylabel("Closeness [mm]")
+    axs[1, 0].grid(True)
+    axs[1, 0].legend(loc='upper right')
+
+    # Right Eye - Upper and Lower Lids
+    axs[0, 1].set_title("Right Eye - Upper and Lower Lids")
+    axs[0, 1].plot(t, [val for val in data['r_top']], label='Upper Lid', color='red', linestyle='--', alpha=0.7)
+    axs[0, 1].plot(t, [val for val in data['r_bottom']], label='Lower Lid', color='green', linestyle='--', alpha=0.7)
+    axs[0, 1].set_ylabel("Distance between upper and lower lids [mm]")
+    axs[0, 1].grid(True)
+    axs[0, 1].legend(loc='upper right')
+
+    # Right Eye - Closeness
+    axs[1, 1].set_title("Right Eye - Closeness")
+    axs[1, 1].plot(t, [data['r_top'][i] - data['r_bottom'][i] for i in range(len(data['r_top']))], label='Closeness', color='blue', linewidth=2)
+    axs[1, 1].axhline(0, color='black', linewidth=2, linestyle='--')  
+    axs[1, 1].set_xlabel("Time [sec]")
+    axs[1, 1].set_ylabel("Closeness [mm]")
+    axs[1, 1].grid(True)
+    axs[1, 1].legend(loc='upper right')
 
     plt.tight_layout()
     plt.savefig(GRAPH_PATH)
@@ -350,3 +364,4 @@ if __name__ == "__main__":
     
     # グラフ表示
     plot_blink_results(logged_data)
+    # plot_blink_result_surface(logged_data)
